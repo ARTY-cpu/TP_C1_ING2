@@ -6,7 +6,7 @@
 int arrived = 0;
 pthread_mutex_t m1;
 pthread_cond_t cond;
-int N = 5;
+int N = 3;
 
 void attente_aleatoire() {
     const int rd = rand() % 3;
@@ -14,10 +14,12 @@ void attente_aleatoire() {
 }
 
 
-void *thread_group() {
+void *thread_group(void *arg) {
+    const int i = *((int*)arg);
     attente_aleatoire();
 
     pthread_mutex_lock(&m1);
+    printf("[Thread %d] Point atteint\n", i); fflush(stdout);
     arrived++;
     if (arrived == N) {
         pthread_cond_signal(&cond);
@@ -34,11 +36,12 @@ void *thread_barriere() {
 
     pthread_mutex_lock(&m1);
     while (arrived < N) {
+        printf("[Thread Barriere] Barriere atteinte, en attente...\n");
         pthread_cond_wait(&cond, &m1);
     }
     pthread_mutex_unlock(&m1);
 
-    printf(">>> Tous les threads ont atteint la barriere !\n");
+    printf("[Thread Barriere] Je peux continuer !\n");
 
     attente_aleatoire();
 
@@ -47,13 +50,15 @@ void *thread_barriere() {
 
 int main() {
     pthread_t groupes[N], t_barriere;
+    int ids[N];
     srand(time(NULL));
 
     pthread_mutex_init(&m1, NULL);
     pthread_cond_init(&cond, NULL);
 
     for (int i = 0; i < N; i++) {
-        pthread_create(&groupes[i], NULL, thread_group, NULL);
+        ids[i] = i +1;
+        pthread_create(&groupes[i], NULL, thread_group, &ids[i]);
     }
     pthread_create(&t_barriere, NULL, thread_barriere, NULL);
 
